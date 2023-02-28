@@ -137,7 +137,7 @@ def train(train_dataloader: DataLoader, val_dataloader: DataLoader, model: AutoM
                 f'epoch: {epoch + 1}/{epochs}, ' +
                 f'{batch_idx + 1}/{len(train_dataloader)}, '
                 f'{epoch_time:.0f}s {batch_time * 1e3:.0f}ms/step, ' +
-                f'lr base: {optimizer.param_groups[0]["lr"]:.3g} lr head: {optimizer.param_groups[1]["lr"]:.3g}, ' +
+                #f'lr base: {optimizer.param_groups[0]["lr"]:.3g} lr head: {optimizer.param_groups[1]["lr"]:.3g}, ' +
                 f'loss: {running_loss / batch_steps:.3g}, ' +
                 '               ',
                 end='\r'
@@ -159,7 +159,7 @@ def train(train_dataloader: DataLoader, val_dataloader: DataLoader, model: AutoM
         print(
             f'epoch: {epoch + 1}/{epochs}, ' +
             f'{epoch_time:.0f}s, ' +
-            f'lr base: {optimizer.param_groups[0]["lr"]:.3g} lr head: {optimizer.param_groups[1]["lr"]:.3g}, ' +
+            #f'lr base: {optimizer.param_groups[0]["lr"]:.3g} lr head: {optimizer.param_groups[1]["lr"]:.3g}, ' +
             f'loss: {running_loss / batch_steps:.3g} val loss:, {val_loss.mean():.3g}, ' + 
             f'val f1 macro: {val_f1_macro * 100:.3g} %'
             )
