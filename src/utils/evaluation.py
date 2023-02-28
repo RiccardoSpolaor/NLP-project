@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from transformers import AutoModelForSequenceClassification
-from typing import Tuple
+from typing import Optional, Tuple, Union
 
 def get_dataset_predictions(model: AutoModelForSequenceClassification, dataloader: DataLoader,
                             device: str) -> Tuple[np.ndarray, np.ndarray]:
@@ -28,11 +28,11 @@ def get_dataset_predictions(model: AutoModelForSequenceClassification, dataloade
     return np.array(predictions), np.array(true_labels).astype(np.uint8)
 
 def predict(model: AutoModelForSequenceClassification, dataloader: DataLoader, device: str,
-            threshold: int = None) -> Tuple[np.ndarray, np.ndarray]:
+            threshold: Optional[Union[float, np.ndarray[float]]] = None) -> Tuple[np.ndarray, np.ndarray]:
     preds, y_true = get_dataset_predictions(model, dataloader, device)
 
     if threshold is None:
-        threshold = 0
+        threshold = 0.
 
     preds = preds > threshold
 
