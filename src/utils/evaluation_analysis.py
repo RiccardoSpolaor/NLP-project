@@ -45,9 +45,9 @@ def plot_targets_classification_statistics(y_true: np.ndarray, y_pred: np.ndarra
     plt.show()
 
 def plot_confusion_matrices(y_true: np.ndarray, y_pred: np.ndarray, targets: List[str], dataset_name: str,
-                            normalize_by: str = 'recall') -> None:
-    assert normalize_by in ['recall', 'precision', 'accuracy'], \
-        'Select one normalization metric among: recall, precision or accuracy'
+                            normalize_by: str = 'none') -> None:
+    assert normalize_by in ['recall', 'precision', 'accuracy', 'none'], \
+        'Select one normalization metric among: recall, precision, accuracy or none'
     
     confusion_matrices = multilabel_confusion_matrix(y_true, y_pred).astype(np.float32)
     
