@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.metrics import precision_recall_curve
 import torch
 from torch.utils.data import DataLoader
 from transformers import AutoModelForSequenceClassification
@@ -39,3 +40,13 @@ def predict(model: AutoModelForSequenceClassification, dataloader: DataLoader, d
     preds = preds.astype(np.uint8)
 
     return preds, y_true
+
+def get_best_thresholds(y_true, y_preds):
+    precision, recall, thresholds, f1_scores, idx_max, best_thresholds = dict(), dict(), dict(), dict(), dict(), dict()
+
+    for i in range(y_true.shape[1]):
+        precision[i], recall[i], thresholds[i] = precision_recall_curve(y_true[:,i], y_preds[:,i])
+        f1_scores[i] = np.array([2 * (p * r) / (p + r) if p + r != 0 else 0. for p, r in zip(precision[i], recall[i])])
+        idx_max[i] = f1_scores[i].argmax()
+        best_thresholds[i] = thresholds[i][idx_max[i]]
+    return np.array(list(best_thresholds.values()))
