@@ -1,7 +1,7 @@
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-def get_main_model(name: str, num_labels: int, tokenizer: AutoTokenizer, device: str) -> AutoModelForSequenceClassification:
-    """Get the main model for the identification of human values behind arguments. 
+def get_transformer_model(name: str, num_labels: int, tokenizer: AutoTokenizer, device: str) -> AutoModelForSequenceClassification:
+    """Get a transformer-based model for the identification of human values behind arguments. 
 
     Parameters
     ----------
@@ -17,11 +17,12 @@ def get_main_model(name: str, num_labels: int, tokenizer: AutoTokenizer, device:
     Returns
     -------
     AutoModelForSequenceClassification
-        The main model
+        The transformer-based model
     """
-    # Create the model.
-    model = AutoModelForSequenceClassification.from_pretrained(name, num_labels=num_labels, ignore_mismatched_sizes=True,
-                                                               problem_type='multi_label_classification')
+    # Get the model.
+    model = AutoModelForSequenceClassification.from_pretrained(
+        name, num_labels=num_labels, ignore_mismatched_sizes=True,
+        problem_type='multi_label_classification')
 
     # Resize the embedding matrix to the tokenizer new length.
     model.resize_token_embeddings(len(tokenizer))

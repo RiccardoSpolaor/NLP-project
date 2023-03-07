@@ -87,7 +87,7 @@ def _plot_roc_subplot(y_true: np.ndarray, pred_scores: np.ndarray, targets: List
             ax=ax
         )
 
-def get_roc_statistics(y_true: np.ndarray, pred_scores: np.ndarray, targets: List[str]):
+def get_precision_recall_statistics(y_true: np.ndarray, pred_scores: np.ndarray, targets: List[str]):
     precision, recall, average_precision = dict(), dict(), dict()
     for i in range(len(targets)):
         precision[i], recall[i], _ = precision_recall_curve(y_true[:, i], pred_scores[:, i])
@@ -100,7 +100,7 @@ def get_roc_statistics(y_true: np.ndarray, pred_scores: np.ndarray, targets: Lis
     average_precision["macro"] = average_precision_score(y_true, pred_scores, average="macro")
     return precision, recall, average_precision
 
-def plot_roc_curves(precision, recall, average_precision, targets: List[str], dataset_name: str) -> None:
+def plot_precision_recall_curves(precision, recall, average_precision, targets: List[str], dataset_name: str) -> None:
     plt.figure(figsize=(15,10))
     plt.subplot(2, 2, 1)
     plt.suptitle(f'Precision-Recall One-vs-Rest curves on the {dataset_name} set')

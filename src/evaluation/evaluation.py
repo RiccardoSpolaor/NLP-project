@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 from transformers import AutoModelForSequenceClassification
 from typing import Optional, Tuple, Union
 
-def get_dataset_predictions(model: AutoModelForSequenceClassification, dataloader: DataLoader,
+def get_dataset_prediction_scores(model: AutoModelForSequenceClassification, dataloader: DataLoader,
                             device: str) -> Tuple[np.ndarray, np.ndarray]:
     predictions = []
     true_labels = []
@@ -28,18 +28,18 @@ def get_dataset_predictions(model: AutoModelForSequenceClassification, dataloade
 
     return np.array(predictions), np.array(true_labels).astype(np.uint8)
 
-def predict(model: AutoModelForSequenceClassification, dataloader: DataLoader, device: str,
-            threshold: Optional[Union[float, np.ndarray[float]]] = None) -> Tuple[np.ndarray, np.ndarray]:
-    preds, y_true = get_dataset_predictions(model, dataloader, device)
+def get_dataset_predictions(model: AutoModelForSequenceClassification, dataloader: DataLoader, device: str,
+            thresholds: Optional[Union[float, np.ndarray[float]]] = None) -> Tuple[np.ndarray, np.ndarray]:
+    y_scores, y_true = get_dataset_prediction_scores(model, dataloader, device)
 
-    if threshold is None:
-        threshold = 0.
+    if thresholds is None:
+        thresholds = 0.
 
-    preds = preds > threshold
+    y_preds = y_scores > thresholds
 
-    preds = preds.astype(np.uint8)
+    y_preds = y_preds.astype(np.uint8)
 
-    return preds, y_true
+    return y_preds, y_true
 
 def get_best_thresholds(y_true, y_preds):
     precision, recall, thresholds, f1_scores, idx_max, best_thresholds = dict(), dict(), dict(), dict(), dict(), dict()

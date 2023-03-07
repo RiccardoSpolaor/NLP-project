@@ -1,10 +1,10 @@
 from collections import Counter, OrderedDict
-import matplotlib.pyplot as plt 
+from typing import Optional
 import pandas as pd
 import string
+import matplotlib.pyplot as plt 
 from wordcloud import WordCloud, STOPWORDS
 
-from typing import Optional
 
 def plot_stance_distribution(arguments_df: pd.DataFrame, title: str = 'Stance distribution') -> None:
     """Plot the distribution of stances across the dataframe

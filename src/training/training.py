@@ -9,23 +9,26 @@ import numpy as np
 from torch.utils.data import DataLoader
 
 from .training_utils import Checkpoint, EarlyStopping
-from .evaluation import get_dataset_predictions, get_best_thresholds
+from ..evaluation.evaluation import get_dataset_prediction_scores, get_best_thresholds
 
 def _loss_validate(model: AutoModelForSequenceClassification, val_dataloader: DataLoader, loss_function: torch.nn.Module,
-                   device: str, print_result: bool = True):
+                   device: str, use_threshold_selection: bool, print_result: bool = True):
     print()
     start_time = time()
 
     torch.cuda.empty_cache()
 
-    preds, y_true = get_dataset_predictions(model, val_dataloader, device)
+    y_scores, y_true = get_dataset_prediction_scores(model, val_dataloader, device)
     
-    loss = loss_function(torch.Tensor(preds).to(device, dtype=torch.float32),
+    loss = loss_function(torch.Tensor(y_scores).to(device, dtype=torch.float32),
                          torch.Tensor(y_true).to(device, dtype=torch.float32))
     
-    thresholds_per_target = get_best_thresholds(y_true, preds)
+    if use_threshold_selection:
+        thresholds_per_target = get_best_thresholds(y_true, y_scores)
+        y_pred = y_scores > thresholds_per_target
+    else:
+        y_pred = y_scores > 0.
     
-    y_pred = preds > thresholds_per_target
     y_pred = y_pred.astype(np.uint8)
 
     f1_macro = f1_score(y_true=y_true, y_pred=y_pred, average='macro')
@@ -35,21 +38,22 @@ def _loss_validate(model: AutoModelForSequenceClassification, val_dataloader: Da
     
     if print_result:
         print(
-            f'validate: ' +
-            f'{final_time:.0f}s, ' +
-            f'validation loss: {loss:.3g}, '
-            f'validation f1 macro: {f1_macro * 100:.3g} %' +
-            '               '
-            )
+            'validate:',
+            f'{final_time:.0f}s,',
+            f'validation loss: {loss:.3g},',
+            f'validation f1 macro: {f1_macro * 100:.3g} %',
+            '               ')
 
     return loss, f1_macro
 
 
+DIV_STR =     '---------------------------------------------------------------'
+BIG_DIV_STR = '==============================================================='
 
 def train(train_dataloader: DataLoader, val_dataloader: DataLoader, model: AutoModelForSequenceClassification, 
           optimizer: torch.optim.Optimizer, loss_function: torch.nn.Module, device: str, epochs: int = 5,
           steps_validate: int = 100, checkpoint: Optional[Checkpoint] = None, early_stopping: Optional[EarlyStopping] = None, 
-          reload_best_weights: bool = True) -> None:
+          reload_best_weights: bool = True, use_threshold_selection: bool = True) -> None:
     train_loss_history = []
     val_loss_history = []
     val_f1_macro_history = []
@@ -108,7 +112,8 @@ def train(train_dataloader: DataLoader, val_dataloader: DataLoader, model: AutoM
                 torch.cuda.empty_cache()
 
                 # Compute both the token importances validation loss and the answer generation validation loss
-                val_loss, val_f1_macro = _loss_validate(model, val_dataloader, loss_function, device)
+                val_loss, val_f1_macro = _loss_validate(model, val_dataloader, loss_function, device,
+                                                        use_threshold_selection)
                 
                 # Update validation loss history
                 val_loss_history.append([n_steps, val_loss.item()])
@@ -136,36 +141,34 @@ def train(train_dataloader: DataLoader, val_dataloader: DataLoader, model: AutoM
             
             # TODO: function to print batch string
             print(
-                f'epoch: {epoch + 1}/{epochs}, ' +
-                f'{batch_idx + 1}/{len(train_dataloader)}, '
-                f'{epoch_time:.0f}s {batch_time * 1e3:.0f}ms/step, ' +
-                #f'lr base: {optimizer.param_groups[0]["lr"]:.3g} lr head: {optimizer.param_groups[1]["lr"]:.3g}, ' +
-                f'loss: {running_loss / batch_steps:.3g}, ' +
+                f'epoch: {epoch + 1}/{epochs},',
+                f'{batch_idx + 1}/{len(train_dataloader)},',
+                f'{epoch_time:.0f}s {batch_time * 1e3:.0f}ms/step,',
+                f'loss: {running_loss / batch_steps:.3g}',
                 '               ',
-                end='\r'
-                )
+                end='\r')
 
             n_steps += 1
 
         model.eval()
         torch.cuda.empty_cache()
         # Compute both the token importances validation loss and the answer generation validation loss
-        val_loss, val_f1_macro = _loss_validate(model, val_dataloader, loss_function, device, print_result=False)
+        val_loss, val_f1_macro = _loss_validate(model, val_dataloader, loss_function, device,
+                                                use_threshold_selection, print_result=False)
         # Update validation loss history
         val_loss_history.append([n_steps, val_loss.item()])
         val_f1_macro_history.append([n_steps, val_f1_macro])
 
         torch.cuda.empty_cache()
 
-        print('-----------------------------------------------------------------------------------------------')
+        print(DIV_STR)
         print(
-            f'epoch: {epoch + 1}/{epochs}, ' +
-            f'{epoch_time:.0f}s, ' +
-            #f'lr base: {optimizer.param_groups[0]["lr"]:.3g} lr head: {optimizer.param_groups[1]["lr"]:.3g}, ' +
-            f'loss: {running_loss / batch_steps:.3g} val loss:, {val_loss.mean():.3g}, ' + 
-            f'val f1 macro: {val_f1_macro * 100:.3g} %'
-            )
-        print('===============================================================================================')
+            f'epoch: {epoch + 1}/{epochs},',
+            f'{epoch_time:.0f}s,',
+            f'loss: {running_loss / batch_steps:.3g},',
+            f'val loss:, {val_loss.mean():.3g},',
+            f'val f1 macro: {val_f1_macro * 100:.3g} %')
+        print(BIG_DIV_STR)
         
         if checkpoint is not None:
             checkpoint.save_best(val_f1_macro, train_loss_history=train_loss_history, val_loss_history=val_loss_history,

@@ -31,32 +31,14 @@ def _plot_loss_subplot(train_loss_history: np.ndarray, val_loss_history: np.ndar
 def _plot_f1_subplot(validation_f1_history: np.ndarray, subplot_index: int) -> None:
     plt.subplot(2, 1, subplot_index)
 
-    plt.title(f'F1 macro history on the validation set')
+    plt.title('F1 macro history on the validation set')
 
     #plt.plot(val_f1_macro_history)
     plt.plot(validation_f1_history[:,0], validation_f1_history[:,1], 'r')
-    
-    # averaged_train_history = np.convolve(train_history, np.ones(n_batches)/n_batches, mode='valid')
-    
-    #plt.plot(np.linspace(0, len(train_history), len(averaged_train_history)), averaged_train_history,
-    #         label=f'Training {metric} averaged on {n_batches} batches')
-    
-    #plt.plot(np.convolve(training_loss_history[:,loss_index], np.ones(n_batches)/n_batches, mode='valid'), 
-    #         label=f'Training loss averaged on {n_batches} batches')
 
-    # Plot validation history if present
-    #plt.plot(validation_history[:,0], validation_history[:,1], 'r*', label=f'Validation {metric}')
-    
     plt.xlabel('iterations')
-    
-    # Use log scale if specified
-    #if use_log_scale:
-    #    plt.yscale('log')
-    #    plt.ylabel(f'{metric} (log)')
-    #else:
-    plt.ylabel('F1 macro')
 
-    #plt.legend()
+    plt.ylabel('F1 macro')
 
 
 def plot_training_history(train_loss_history: np.ndarray, val_loss_history: np.ndarray,

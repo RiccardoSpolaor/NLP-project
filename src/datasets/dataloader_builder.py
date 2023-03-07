@@ -6,9 +6,12 @@ from torch.utils.data import Dataset, DataLoader
 from transformers import AutoTokenizer
 from typing import Dict, List, Tuple
 
+
 class HumanValueDataset(Dataset):
     """ The Human Value Dataset. Extends the class Dataset of torch."""
-    def __init__(self, arguments_df: pd.DataFrame, labels_df: pd.DataFrame) -> None:
+
+    def __init__(self, arguments_df: pd.DataFrame, labels_df: pd.DataFrame,
+                 stance_encoder: Dict[str, str]) -> None:
         """Create an instance of the Human Value Dataset from a certain dataframe.
 
         Parameters
@@ -17,14 +20,17 @@ class HumanValueDataset(Dataset):
             The arguments dataframe.
         labels_df : DataFrame
             The labels dataframe.
+        stance encoder : { str: str }
+            Dictionary containing the encoding for each stance.
         """
         self.len = len(arguments_df)
         # The arguments dataframe
-        self.arguments_data = arguments_df[['Premise', 'Conclusion', 'Stance']].to_numpy()
+        self.arguments_data = arguments_df[[
+            'Premise', 'Conclusion', 'Stance']].to_numpy()
         # The labels dataframe
         self.labels_data = labels_df.to_numpy()
         # Encoder of the stance string into the relative tokenizer tokens
-        self.stance_encoder = {'in favor of': '[FAV]', 'against': '[AGN]'}
+        self.stance_encoder = stance_encoder
 
     # Casual number between 1 and 3 and depending on that give premise conclusion or both.
     def __getitem__(self, index: int) -> Tuple[str, str, str, List[np.ndarray[int]]]:
@@ -45,18 +51,18 @@ class HumanValueDataset(Dataset):
         premise = arguments_data[0]
         conclusion = arguments_data[1]
         stance = arguments_data[2]
-        
+
         # Encode the stance into `[FAV]` or `[AGN]`
         encoded_stance = self.stance_encoder[stance]
-        
+
         # Get the targets vector
         targets_vector = self.labels_data[index]
-        
+
         # Get the whole text as: '<premise> [FAV]/[AGN] <conclusion>'
         whole_text = premise + f' {encoded_stance} ' + conclusion
 
         return premise, conclusion, whole_text, targets_vector
-    
+
     def __len__(self) -> int:
         """Get the length of the dataset.
 
@@ -67,9 +73,12 @@ class HumanValueDataset(Dataset):
         """
         return self.len
 
-def _collate_batch(batch: Tuple[Tuple[str, str, str, List[np.ndarray[int]]]], tokenizer: AutoTokenizer, 
+
+def _collate_batch(batch: Tuple[Tuple[str, str, str, List[np.ndarray[int]]]],
+                   tokenizer: AutoTokenizer,
                    augment_data: bool = False) -> Dict[str, torch.Tensor]:
-    """Function to transforms a minibatch of samples into a format useful for the training procedure.
+    """Function to transforms a minibatch of samples into a format useful for
+    the training procedure.
 
     Parameters
     ----------
@@ -83,7 +92,8 @@ def _collate_batch(batch: Tuple[Tuple[str, str, str, List[np.ndarray[int]]]], to
     Returns
     -------
     { 'ids': Tensor, 'mask': Tensor, 'labels': Tensor }
-        Dictionary of tensors containing the encoded ids of the minibatch, their attention masks and the respective labels.
+        Dictionary of tensors containing the encoded ids of the minibatch,
+        their attention masks and the respective labels.
     """
     # Create a numpy matrix for the input texts and the labels
     input_texts = np.zeros(shape=(len(batch),), dtype=object)
@@ -121,8 +131,11 @@ def _collate_batch(batch: Tuple[Tuple[str, str, str, List[np.ndarray[int]]]], to
         'labels': torch.tensor(labels, dtype=torch.float32)
     }
 
-def get_dataloader(arguments_df: pd.DataFrame, labels_df: pd.DataFrame, tokenizer: AutoTokenizer, batch_size: int = 8,
-                   shuffle: bool = True, use_augmentation: bool = False) -> DataLoader:
+
+def get_dataloader(arguments_df: pd.DataFrame, labels_df: pd.DataFrame,
+                   tokenizer: AutoTokenizer, stance_encoder: Dict[str, str],
+                   batch_size: int = 8, shuffle: bool = True,
+                   use_augmentation: bool = False) -> DataLoader:
     """Get a dataloader from the arguments and labels dataframes.
 
     Parameters
@@ -133,6 +146,8 @@ def get_dataloader(arguments_df: pd.DataFrame, labels_df: pd.DataFrame, tokenize
         The labels dataframe.
     tokenizer : AutoTokenizer
         The autotokenizer to encode the input data.
+    stance encoder : { str: str }
+        Dictionary containing the encoding for each stance.
     batch_size : int, optional
         The batch size, by default 8.
     shuffle : bool, optional
@@ -146,8 +161,8 @@ def get_dataloader(arguments_df: pd.DataFrame, labels_df: pd.DataFrame, tokenize
         The dataloader.
     """
     # Get dataset
-    dataset = HumanValueDataset(arguments_df, labels_df)
+    dataset = HumanValueDataset(arguments_df, labels_df, stance_encoder)
     # Get dataloder
-    data_loader = DataLoader(dataset, num_workers=0, shuffle=shuffle, batch_size=batch_size, 
+    data_loader = DataLoader(dataset, num_workers=0, shuffle=shuffle, batch_size=batch_size,
                              collate_fn=lambda x: _collate_batch(x, tokenizer, augment_data=use_augmentation))
     return data_loader
