@@ -2,7 +2,7 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import (auc, classification_report, ConfusionMatrixDisplay, multilabel_confusion_matrix, 
-                             roc_curve, RocCurveDisplay)
+                             precision_recall_curve, average_precision_score, RocCurveDisplay, PrecisionRecallDisplay)
 
 from typing import Dict, List, OrderedDict
 
@@ -76,61 +76,60 @@ def plot_confusion_matrices(y_true: np.ndarray, y_pred: np.ndarray, targets: Lis
 
     plt.show()
 
-def _plot_roc_subplot(y_true: np.ndarray, pred_scores: np.ndarray, targets: List[str], index: int) -> None:
+def _plot_roc_subplot(y_true: np.ndarray, pred_scores: np.ndarray, targets: List[str], index: int, ax) -> None:
     ax = plt.subplot(2, 2, index)
 
     for class_id in range(index * 4, index * 4 + 4):
-        RocCurveDisplay.from_predictions(
+        PrecisionRecallDisplay.from_predictions(
             y_true[:, class_id],
             pred_scores[:, class_id],
             name=f"{targets[class_id]}",
             ax=ax
         )
 
-def plot_roc_curves(y_true: np.ndarray, pred_scores: np.ndarray, targets: List[str], dataset_name: str) -> None:
-    fpr, tpr, roc_auc = dict(), dict(), dict()
+def get_roc_statistics(y_true: np.ndarray, pred_scores: np.ndarray, targets: List[str]):
+    precision, recall, average_precision = dict(), dict(), dict()
     for i in range(len(targets)):
-        fpr[i], tpr[i], _ = roc_curve(y_true[:,i], pred_scores[:,i])
-        roc_auc[i] = auc(fpr[i], tpr[i])
+        precision[i], recall[i], _ = precision_recall_curve(y_true[:, i], pred_scores[:, i])
+        average_precision[i] = average_precision_score(y_true[:, i], pred_scores[:, i])
 
-    fpr_grid = np.linspace(0.0, 1.0, 1000)
+    # A "micro-average": quantifying score on all classes jointly
+    precision["macro"], recall["macro"], _ = precision_recall_curve(
+        y_true.ravel(), pred_scores.ravel()
+    )
+    average_precision["macro"] = average_precision_score(y_true, pred_scores, average="macro")
+    return precision, recall, average_precision
 
-    # Interpolate all ROC curves at these points
-    mean_tpr = np.zeros_like(fpr_grid)
-
-    for i in range(len(targets)):
-        # Linear interpolation
-        mean_tpr += np.interp(fpr_grid, fpr[i], tpr[i])
-
-    # Average it and compute AUC
-    mean_tpr /= len(targets)
-
-    fpr["macro"] = fpr_grid
-    tpr["macro"] = mean_tpr
-    roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
-
-    print(f"Macro-averaged One-vs-Rest ROC AUC score:\n{roc_auc['macro']:.2f}")
-    
-    
+def plot_roc_curves(precision, recall, average_precision, targets: List[str], dataset_name: str) -> None:
     plt.figure(figsize=(15,10))
     plt.subplot(2, 2, 1)
-    plt.suptitle(f'Receiver Operating Characteristic One-vs-Rest curves on the {dataset_name} set')
+    plt.suptitle(f'Precision-Recall One-vs-Rest curves on the {dataset_name} set')
 
     for i in range(4):
-        _plot_roc_subplot(y_true, pred_scores, targets, i + 1)
-        plt.plot(
-            fpr["macro"],
-            tpr["macro"],
-            label=f"macro-average (AUC = {roc_auc['macro']:.2f})",
-            color="navy",
-            linestyle=":",
-            linewidth=4,
+        ax = plt.subplot(2, 2, i + 1)
+        for class_id in range(i * 4, i * 4 + 4):
+            display = PrecisionRecallDisplay(
+                recall=recall[class_id],
+                precision=precision[class_id],
+                average_precision=average_precision[class_id]
+            )
+            display.plot(ax=ax, name=f"{targets[class_id]}")
+        display = PrecisionRecallDisplay(
+            recall=recall["macro"],
+            precision=precision["macro"],
+            average_precision=average_precision["macro"]
         )
-        plt.plot([0, 1], [0, 1], "k--", label="Chance level (AUC = 0.5)")
+        display.plot(ax=ax, name="Macro-average precision-recall", color="navy", linestyle=":", linewidth=4)
+        ax.set_xlim([-0.1, 1.1])
+        ax.set_ylim([-0.1, 1.1])
+        #ax.set_xticks(np.arange(0., 1.1, .2))
+        #ax.set_yticks(np.arange(0., 1.1, .2))
+        #display.plot(ax=ax, name=f"Precision-recall for class {i}", color=color)
+        #plt.plot([0, 1], [0, 1], "k--", label="Chance level (AUC = 0.5)")
 
-        plt.xlabel("False Positive Rate")
-        plt.ylabel("True Positive Rate")
-        plt.legend()
-        plt.axis("square")
+        plt.xlabel("precision")
+        plt.ylabel("recall")
+        plt.legend(loc='upper right')
+        #plt.axis("square")
     plt.tight_layout()
     plt.show()
