@@ -9,7 +9,7 @@ import numpy as np
 from torch.utils.data import DataLoader
 
 from .training_utils import Checkpoint, EarlyStopping
-from .evaluation import get_dataset_predictions
+from .evaluation import get_dataset_predictions, get_best_thresholds
 
 def _loss_validate(model: AutoModelForSequenceClassification, val_dataloader: DataLoader, loss_function: torch.nn.Module,
                    device: str, print_result: bool = True):
@@ -23,7 +23,9 @@ def _loss_validate(model: AutoModelForSequenceClassification, val_dataloader: Da
     loss = loss_function(torch.Tensor(preds).to(device, dtype=torch.float32),
                          torch.Tensor(y_true).to(device, dtype=torch.float32))
     
-    y_pred = preds > 0
+    thresholds_per_target = get_best_thresholds(y_true, preds)
+    
+    y_pred = preds > thresholds_per_target
     y_pred = y_pred.astype(np.uint8)
 
     f1_macro = f1_score(y_true=y_true, y_pred=y_pred, average='macro')
