@@ -1,7 +1,12 @@
+"""Module providing a function to get a transformer model for the 
+identification of human values behind arguments."""
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-def get_transformer_model(name: str, num_labels: int, tokenizer: AutoTokenizer, device: str) -> AutoModelForSequenceClassification:
-    """Get a transformer-based model for the identification of human values behind arguments. 
+
+def get_transformer_model(name: str, num_labels: int, tokenizer: AutoTokenizer,
+                          device: str) -> AutoModelForSequenceClassification:
+    """Get a transformer-based model for the identification of human values
+    behind arguments. 
 
     Parameters
     ----------

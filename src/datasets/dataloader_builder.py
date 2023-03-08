@@ -1,10 +1,11 @@
-import numpy as np
-import pandas as pd
+"""Module providing a function to build the dataloader."""
 from random import sample
+from typing import Dict, List, Tuple
+from transformers import AutoTokenizer
 import torch
 from torch.utils.data import Dataset, DataLoader
-from transformers import AutoTokenizer
-from typing import Dict, List, Tuple
+import numpy as np
+import pandas as pd
 
 
 class HumanValueDataset(Dataset):
@@ -12,7 +13,8 @@ class HumanValueDataset(Dataset):
 
     def __init__(self, arguments_df: pd.DataFrame, labels_df: pd.DataFrame,
                  stance_encoder: Dict[str, str]) -> None:
-        """Create an instance of the Human Value Dataset from a certain dataframe.
+        """Create an instance of the Human Value Dataset from a certain 
+        dataframe.
 
         Parameters
         ----------
@@ -32,8 +34,8 @@ class HumanValueDataset(Dataset):
         # Encoder of the stance string into the relative tokenizer tokens
         self.stance_encoder = stance_encoder
 
-    # Casual number between 1 and 3 and depending on that give premise conclusion or both.
-    def __getitem__(self, index: int) -> Tuple[str, str, str, List[np.ndarray[int]]]:
+    def __getitem__(self, index: int) -> Tuple[str, str, str, 
+                                               List[np.ndarray[int]]]:
         """Get the item at a certain index in the dataset.
 
         Parameters
@@ -44,7 +46,8 @@ class HumanValueDataset(Dataset):
         Returns
         -------
         (str, str, str, ndarray of int)
-            The current item encoded as ('<premise>', '<conclusion>', '<premise> [FAV]/[AGN] <conclusion>', <targets vector>).
+            The current item encoded as ('<premise>', '<conclusion>', 
+            '<premise> [FAV]/[AGN] <conclusion>', <targets vector>).
         """
         # Get the premise, conclusion and stance at the current index
         arguments_data = self.arguments_data[index]
@@ -73,7 +76,6 @@ class HumanValueDataset(Dataset):
         """
         return self.len
 
-
 def _collate_batch(batch: Tuple[Tuple[str, str, str, List[np.ndarray[int]]]],
                    tokenizer: AutoTokenizer,
                    augment_data: bool = False) -> Dict[str, torch.Tensor]:
@@ -100,10 +102,12 @@ def _collate_batch(batch: Tuple[Tuple[str, str, str, List[np.ndarray[int]]]],
     labels = np.zeros(shape=(len(batch), len(batch[0][3])))
 
     for i, (p, c, w, l) in enumerate(batch):
-        # Get random text among <premise>, <conclusion> and '<premise> [FAV]/[AGN] <conclusion>'
+        # Get random text among <premise>, <conclusion> and
+        # '<premise> [FAV]/[AGN] <conclusion>'
         if augment_data:
             [result] = sample([p, c, w], 1)
-        # If no data augmentation is required get '<premise> [FAV]/[AGN] <conclusion>'
+        # If no data augmentation is required get
+        # '<premise> [FAV]/[AGN] <conclusion>'
         else:
             result = w
         # Assign to the matrices at the given index the text and the labels
@@ -131,7 +135,6 @@ def _collate_batch(batch: Tuple[Tuple[str, str, str, List[np.ndarray[int]]]],
         'labels': torch.tensor(labels, dtype=torch.float32)
     }
 
-
 def get_dataloader(arguments_df: pd.DataFrame, labels_df: pd.DataFrame,
                    tokenizer: AutoTokenizer, stance_encoder: Dict[str, str],
                    batch_size: int = 8, shuffle: bool = True,
@@ -151,7 +154,8 @@ def get_dataloader(arguments_df: pd.DataFrame, labels_df: pd.DataFrame,
     batch_size : int, optional
         The batch size, by default 8.
     shuffle : bool, optional
-        Whether or not to shuffle the data while creating the dataloader, by default True.
+        Whether or not to shuffle the data while creating the dataloader,
+        by default True.
     use_augmentation : bool, optional
         Whether to augment the data or not, by default False.
 
@@ -163,6 +167,8 @@ def get_dataloader(arguments_df: pd.DataFrame, labels_df: pd.DataFrame,
     # Get dataset
     dataset = HumanValueDataset(arguments_df, labels_df, stance_encoder)
     # Get dataloder
-    data_loader = DataLoader(dataset, num_workers=0, shuffle=shuffle, batch_size=batch_size,
-                             collate_fn=lambda x: _collate_batch(x, tokenizer, augment_data=use_augmentation))
+    data_loader = DataLoader(
+        dataset, num_workers=0, shuffle=shuffle, batch_size=batch_size,
+        collate_fn=lambda x: _collate_batch(x, tokenizer,
+                                            augment_data=use_augmentation))
     return data_loader

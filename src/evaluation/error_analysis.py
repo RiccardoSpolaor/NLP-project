@@ -23,7 +23,6 @@ def _get_accuracy(y_true: np.ndarray, y_preds: np.ndarray) -> np.ndarray:
     """
     return (y_preds == y_true).astype(np.float32).mean(axis=1)
 
-
 def get_k_worst_predicted_instances(
         arguments_test_df: pd.DataFrame, labels_test_df: pd.DataFrame,
         y_true: np.ndarray, y_preds: np.ndarray,
@@ -58,7 +57,6 @@ def get_k_worst_predicted_instances(
         argsort_acc[:n_worst_instances]]
 
     return worst_predicted_instances, worst_predicted_instances_targets
-
 
 def plot_sentiment_values_false_negatives_and_positives(
         worst_predicted_instances_targets: pd.DataFrame, y_true: np.ndarray,
@@ -107,7 +105,7 @@ def plot_sentiment_values_false_negatives_and_positives(
 
 def print_k_worst_predicted_instances(
     worst_predicted_instances: pd.DataFrame, y_true: np.ndarray,
-    y_preds: np.ndarray, targets: List[str],
+    y_pred: np.ndarray, targets: List[str],
     n_worst_instances: int = 5) -> None:
     """Print the worst k predicted instances.
 
@@ -124,12 +122,12 @@ def print_k_worst_predicted_instances(
     n_worst_instances : int, optional
         The k worst instances to print, by default 5.
     """
-    accuracies = _get_accuracy(y_true, y_preds)
+    accuracies = _get_accuracy(y_true, y_pred)
     argsort_acc = np.argsort(accuracies)
 
     for i in range(n_worst_instances):
         row = worst_predicted_instances.iloc[i]
-        p = y_preds[argsort_acc][i]
+        sorted_y_pred = y_pred[argsort_acc][i]
         print(f'Worst instance {i + 1}:')
         print('-----------------')
 
@@ -138,8 +136,8 @@ def print_k_worst_predicted_instances(
         print(f'Conclusion: "{row.Conclusion}"')
 
         print(f'True targets: "{"; ".join(row.Labels)}"')
-        
+
         predicted_targets_str = '; '.join(
-            [t for idx, t in zip(p, targets) if idx == 1])
-        
+            [t for idx, t in zip(sorted_y_pred, targets) if idx == 1])
+
         print(f'Predicted targets: "{predicted_targets_str}"', end='\n')
