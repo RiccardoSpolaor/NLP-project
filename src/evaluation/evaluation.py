@@ -1,7 +1,6 @@
 """Module defining functions to evaluate the model predictions."""
 from typing import Tuple, Union
 import numpy as np
-from sklearn.metrics import precision_recall_curve
 import torch
 from torch.utils.data import DataLoader
 from transformers import AutoModelForSequenceClassification
@@ -80,15 +79,64 @@ def get_dataset_predictions(
 
     return y_preds, y_true
 
-def get_best_thresholds(y_true: np.ndarray, y_preds: np.ndarray) -> np.ndarray:
+def get_cumulative_precision_recall_and_f1(
+    y_true: np.ndarray, y_scores: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Get the cumulative precision, recall and F1 macro score.
+    Parameters
+    ----------
+    y_true : ndarray
+        The true labels.
+    y_scores : ndarray
+        The prediction scores.
+
+    Returns
+    -------
+    (ndarray, ndarray, ndarray, ndarray)
+        Tuple containing the sorted scores, the cumulative precision,
+        recall and F1 macro scores.
+    """
+    y_scores = torch.tensor(y_scores)
+    y_true = torch.tensor(y_true)
+
+    # Argsort elements by non decreasing values of each column.
+    idx = torch.argsort(y_scores, 0)
+
+    # Sort predictions and true labels based on argsort.
+    s_scores = torch.gather(y_scores, 0, idx)
+    s_true = torch.gather(y_true, 0, idx)
+
+    # Cumulative sum of total positive instances.
+    c_positive = torch.cumsum(s_true, 0)
+
+    # Cumulative sum of true positive elements for each target.
+    c_true_positive = c_positive[-1:] - c_positive
+
+    # Vector of instances range.
+    r = (torch.arange(len(c_true_positive)) + 1)[:, None]
+
+    # Constant to handle zero division.
+    CONST = 1e-7
+
+    # Compute the cumulative precision.
+    c_precision = c_true_positive / (r[-1] - r + 1) + CONST
+    # Compute the cumulative recall.
+    c_t_positives_f_negatives = (c_true_positive[:1] + CONST) + CONST
+    c_recall = c_true_positive / c_t_positives_f_negatives
+    # Compute the cumulative F1 macro score.
+    c_f1 = 2 * (c_precision * c_recall) / (c_precision + c_recall)
+    return s_scores, c_precision, c_recall, c_f1
+
+def get_best_thresholds(
+    y_true: np.ndarray, y_scores: np.ndarray) -> np.ndarray:
     """Get the best thresholds for each label that maximize the F1 macro
-    Score.
+    score.
 
     Parameters
     ----------
     y_true : ndarray
         The true labels.
-    y_preds : ndarray
+    y_scores : ndarray
         The prediction scores.
 
     Returns
@@ -96,15 +144,10 @@ def get_best_thresholds(y_true: np.ndarray, y_preds: np.ndarray) -> np.ndarray:
     ndarray
         The best thresholds for each label.
     """
-    precision, recall, thresholds = {}, {}, {}
-    f1_scores, idx_max, best_thresholds = {}, {}, {}
+    s_scores, _, _, c_f1 = get_cumulative_precision_recall_and_f1(
+        y_true, y_scores)
 
-    for i in range(y_true.shape[1]):
-        precision[i], recall[i], thresholds[i] = precision_recall_curve(
-            y_true[:,i], y_preds[:,i])
-        f1_scores[i] = np.array([2 * (p * r) / (p + r) if p + r != 0 else 0.
-                                 for p, r in zip(precision[i], recall[i])])
-        idx_max[i] = f1_scores[i].argmax()
-        best_thresholds[i] = thresholds[i][idx_max[i]]
-
-    return np.array(list(best_thresholds.values()))
+    # Get the index of maximum F1 macro score for each target.
+    idx_max = c_f1.argmax(0)
+    # Get the best threshold for each target.
+    return np.array([s_scores[idx, i] for i, idx in enumerate(idx_max)])
