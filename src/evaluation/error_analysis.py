@@ -140,4 +140,4 @@ def print_k_worst_predicted_instances(
         predicted_targets_str = '; '.join(
             [t for idx, t in zip(sorted_y_pred, targets) if idx == 1])
 
-        print(f'Predicted targets: "{predicted_targets_str}"', end='\n')
+        print(f'Predicted targets: "{predicted_targets_str}"', end='\n\n')
