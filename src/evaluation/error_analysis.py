@@ -44,9 +44,10 @@ def get_k_worst_predicted_instances(
 
     Returns
     -------
-    (DataFrame, DataFrame)
-        Tuple containing the arguments and label dataframes of the k
-        worst instances.
+    DataFrame
+        The arguments dataframe of the k worst instances.
+    DataFrame
+        The labels dataframe of the k worst instances.
     """
     accuracies = _get_accuracy(y_true, y_preds)
     argsort_acc = np.argsort(accuracies)
