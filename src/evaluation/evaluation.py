@@ -2,18 +2,18 @@
 from typing import Tuple, Union
 import numpy as np
 import torch
+from torch import nn
 from torch.utils.data import DataLoader
-from transformers import AutoModelForSequenceClassification
 
 
 def get_dataset_prediction_scores(
-    model: AutoModelForSequenceClassification, dataloader: DataLoader,
-    device: str) -> Tuple[np.ndarray, np.ndarray]:
+    model: nn.Module, dataloader: DataLoader, device: str
+    ) -> Tuple[np.ndarray, np.ndarray]:
     """Get the prediction scores of the model from a dataloader.
 
     Parameters
     ----------
-    model : AutoModelForSequenceClassification
+    model : Module
         The model that is used to predict the scores.
     dataloader : DataLoader
         The dataloader loading the dataset to predict.
@@ -22,9 +22,10 @@ def get_dataset_prediction_scores(
 
     Returns
     -------
-    (ndarray, ndarray)
-        Tuple containing the prediction scores and the true labels
-        of the dataset.
+    ndarray
+        The prediction scores on the dataset instances.
+    ndarray    
+        The true labels of the dataset instances.
     """
     scores = []
     true_labels = []
@@ -32,14 +33,19 @@ def get_dataset_prediction_scores(
     for _, data in enumerate(dataloader, 0):
         with torch.no_grad():
             # Get the data
-            ids = data['ids'].to(device, dtype = torch.long)
-            mask = data['mask'].to(device, dtype = torch.long)
+            ids = data['ids'].to(device)
 
             # Add batch predictions to the full list
-            outputs = model(ids, mask)
-            preds = outputs.logits
-            preds = preds.cpu().numpy()
-            scores.extend(preds)
+            if 'mask' in data.keys():
+                mask = data['mask'].to(device)
+                outputs = model(ids, mask)
+            else:
+                outputs = model(ids)
+
+            if hasattr(outputs, 'logits'):
+                outputs = outputs.logits
+            outputs = outputs.cpu().numpy()
+            scores.extend(outputs)
 
             # Add true targests to the full list
             targets = data['labels'].cpu().numpy()
@@ -48,14 +54,14 @@ def get_dataset_prediction_scores(
     return np.array(scores), np.array(true_labels).astype(np.uint8)
 
 def get_dataset_predictions(
-    model: AutoModelForSequenceClassification, dataloader: DataLoader,
-    device: str, thresholds: Union[float, np.ndarray[float]] = 0.
+    model: nn.Module, dataloader: DataLoader, device: str,
+    thresholds: Union[float, np.ndarray[float]] = 0.
     ) -> Tuple[np.ndarray, np.ndarray]:
     """Get the prediction labels of the model from a dataloader.
 
     Parameters
     ----------
-    model : AutoModelForSequenceClassification
+    model : Module
         The model that is used to predict the labels.
     dataloader : DataLoader
         The dataloader loading the dataset to predict.
@@ -66,9 +72,10 @@ def get_dataset_predictions(
 
     Returns
     -------
-    (ndarray, ndarray)
-        Tuple containing the predicted labels and the true labels
-        of the dataset.
+    ndarray
+        The predicted labels of the dataset instances.
+    ndarray    
+        The true labels of the dataset instances.
     """
     # Get the prediction scores.
     y_scores, y_true = get_dataset_prediction_scores(model, dataloader, device)
@@ -92,9 +99,14 @@ def get_cumulative_precision_recall_and_f1(
 
     Returns
     -------
-    (ndarray, ndarray, ndarray, ndarray)
-        Tuple containing the sorted scores, the cumulative precision,
-        recall and F1 macro scores.
+    ndarray
+        The sorted input logits.
+    ndarray
+        The cumulative precision.
+    ndarray
+        The cumulative recall.
+    ndarray
+        The cumulative F1 macro scores.
     """
     y_scores = torch.tensor(y_scores)
     y_true = torch.tensor(y_true)
