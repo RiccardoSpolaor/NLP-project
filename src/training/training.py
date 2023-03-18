@@ -3,10 +3,10 @@
 from time import time
 from typing import Optional, Tuple
 import torch
-from transformers import AutoModelForSequenceClassification
+from torch import nn
+from torch.utils.data import DataLoader
 from sklearn.metrics import f1_score
 import numpy as np
-from torch.utils.data import DataLoader
 
 from .training_utils import Checkpoint, EarlyStopping
 from ..evaluation.evaluation import (get_dataset_prediction_scores,
@@ -14,14 +14,14 @@ from ..evaluation.evaluation import (get_dataset_prediction_scores,
 
 
 def _get_validation_loss_and_f1(
-    model: AutoModelForSequenceClassification, val_dataloader: DataLoader,
-    loss_function: torch.nn.Module, device: str, use_threshold_selection: bool,
+    model: nn.Module, val_dataloader: DataLoader,
+    loss_function: nn.Module, device: str, use_threshold_selection: bool,
     print_result: bool = True) -> Tuple[float, float]:
     """Function to compute the validation loss and F1 macro score.
 
     Parameters
     ----------
-    model : AutoModelForSequenceClassification
+    model : Module
         The model used to compute the metrics.
     val_dataloader : DataLoader
         The dataloader used to iterate through the validation dataset.
@@ -76,10 +76,9 @@ BIG_DIV_STR = '==============================================================='
 
 def train(
     train_dataloader: DataLoader, val_dataloader: DataLoader,
-    model: AutoModelForSequenceClassification,
-    optimizer: torch.optim.Optimizer, loss_function: torch.nn.Module,
-    device: str, epochs: int = 5, steps_validate: int = 100,
-    checkpoint: Optional[Checkpoint] = None,
+    model: nn.Module, optimizer: torch.optim.Optimizer,
+    loss_function: nn.Module, device: str, epochs: int = 5,
+    steps_validate: int = 100, checkpoint: Optional[Checkpoint] = None,
     early_stopping: Optional[EarlyStopping] = None,
     reload_best_weights: bool = True,
     use_threshold_selection: bool = True
@@ -92,7 +91,7 @@ def train(
         The dataloader used to iterate through the train dataset.
     val_dataloader : DataLoader
         The dataloader used to iterate through the validation dataset.
-    model : AutoModelForSequenceClassification
+    model : Module
         The model to train.
     optimizer : torch.optim.Optimizer
         The optimizer.
@@ -118,9 +117,12 @@ def train(
 
     Returns
     -------
-    (ndarray, ndarray, ndarray)
-        Tuple containing the train loss history, the validation loss history
-        and the validation F1 macro score history.
+    ndarray
+        The train loss history.
+    ndarray
+        The validation loss history.
+    ndarray
+        The validation F1 macro score history.
     """
     train_loss_history = []
     val_loss_history = []
@@ -139,7 +141,7 @@ def train(
 
         # Initialize running loss.
         running_loss = 0.0
-        
+
         optimizer.zero_grad()
 
         start_time = time()
@@ -152,21 +154,27 @@ def train(
             batch_steps += 1
 
             # Get the data.
-            ids = data['ids'].to(device, dtype = torch.long)
-            mask = data['mask'].to(device, dtype = torch.long)
+            ids = data['ids'].to(device)
             targets = data['labels'].to(device, dtype = torch.float32)
-        
+
             # Compute output.
-            outputs = model(ids, mask)
-            
+            if 'mask' in data.keys():
+                mask = data['mask'].to(device)
+                outputs = model(ids, mask)
+            else:
+                outputs = model(ids)
+
             # Loss.
-            loss = loss_function(outputs.logits, targets)
+            if hasattr(outputs, 'logits'):
+                outputs = outputs.logits
+
+            loss = loss_function(outputs, targets)
             running_loss += loss.item()
 
             # Zero the gradients and backpropagate.
             optimizer.zero_grad()
             loss.backward()
-            
+
             # Do the optimization step.
             optimizer.step()
 
@@ -174,7 +182,7 @@ def train(
             if batch_idx % steps_validate == steps_validate - 1:
                 # Set the model in eval mode.
                 model.eval()
-                
+
                 # Remove unused tensors from gpu memory.
                 torch.cuda.empty_cache()
 
@@ -183,14 +191,14 @@ def train(
                 val_loss, val_f1_macro = _get_validation_loss_and_f1(
                     model, val_dataloader, loss_function, device,
                     use_threshold_selection)
-                
+
                 # Update validation loss and F1 score macro history.
                 val_loss_history.append([n_steps, val_loss.item()])
                 val_f1_macro_history.append([n_steps, val_f1_macro])
 
                 # Remove unused tensors from gpu memory.
                 torch.cuda.empty_cache()
-                
+
                 # Save the checpoints and check the early stopping criteria.
                 if checkpoint is not None:
                     checkpoint.save_best(
@@ -208,7 +216,7 @@ def train(
 
             # Update training history and print.
             train_loss_history.append(loss.detach().cpu())
-            
+
             epoch_time = time() - start_time
             batch_time = epoch_time / (batch_idx + 1)
 
