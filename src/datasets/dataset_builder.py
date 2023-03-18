@@ -34,8 +34,10 @@ def get_dataframes(
 
     Returns
     -------
-    (DataFrame, DataFrame)
-        The arguments and labels dataframes.
+    DataFrame
+        The arguments dataframe.
+    DataFrame
+        The labels dataframes.
     """
     # Assert the dataframe type is correct
     assert df_type in ['training', 'validation'], \
@@ -62,26 +64,26 @@ def split_dataframes(
     arguments_df: pd.DataFrame, labels_df: pd.DataFrame, seed: int = 42,
     test_size: int = .2) -> Tuple[Tuple[pd.DataFrame, pd.DataFrame],
                                   Tuple[pd.DataFrame, pd.DataFrame]]:
-    """Split the arguments and label dataframes into train and validation
+    """Split the arguments and label dataframes into train and validation.
 
     Parameters
     ----------
-    arguments_df : pd.DataFrame
-        The arguments pandas dataframe to split
-    labels_df : pd.DataFrame
-        The labels pandas dataframe to split
+    arguments_df : DataFrame
+        The arguments pandas dataframe to split.
+    labels_df : DataFrame
+        The labels pandas dataframe to split.
     seed : int, optional
-        The seed to use, by default 42
+        The seed to use, by default 42.
     test_size : int, optional
-        The test size, by default .2
+        The test size, by default 0.2.
 
     Returns
     -------
-    ((DataFrame, DataFrame), (DataFrame, DataFrame))
-        A tuple containing:
-        - The split arguments train dataframe and the respective labels
+    (DataFrame, DataFrame)
+        The split arguments train dataframe and the respective labels
         dataframe;
-        - The split arguments validation dataframe and the respective
+    (DataFrame, DataFrame)
+        The split arguments validation dataframe and the respective
         labels dataframe.
     """
     # Split the dataframes in train and validation
