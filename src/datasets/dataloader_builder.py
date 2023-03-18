@@ -1,5 +1,6 @@
 """Module providing a function to build the dataloader."""
 from random import sample
+from string import punctuation
 from typing import Dict, List, Tuple
 from transformers import AutoTokenizer
 import torch
@@ -9,8 +10,7 @@ import pandas as pd
 
 
 class HumanValueDataset(Dataset):
-    """ The Human Value Dataset. Extends the class Dataset of torch."""
-
+    """The Human Value Dataset. Extends the class Dataset of torch."""
     def __init__(self, arguments_df: pd.DataFrame, labels_df: pd.DataFrame,
                  stance_encoder: Dict[str, str]) -> None:
         """Create an instance of the Human Value Dataset from a certain 
@@ -45,9 +45,14 @@ class HumanValueDataset(Dataset):
 
         Returns
         -------
-        (str, str, str, ndarray of int)
-            The current item encoded as ('<premise>', '<conclusion>', 
-            '<premise> [FAV]/[AGN] <conclusion>', <targets vector>).
+        str
+            The current item encoded as '<premise>'.
+        str
+            The current item encoded as '<conclusion>'.
+        str
+            The current item encoded as '<premise> [FAV]/[AGN] <conclusion>'.
+        ndarray of int
+            The targets vector.
         """
         # Get the premise, conclusion and stance at the current index
         arguments_data = self.arguments_data[index]
@@ -76,15 +81,16 @@ class HumanValueDataset(Dataset):
         """
         return self.len
 
-def _collate_batch(batch: Tuple[Tuple[str, str, str, List[np.ndarray[int]]]],
-                   tokenizer: AutoTokenizer,
-                   augment_data: bool = False) -> Dict[str, torch.Tensor]:
+def _collate_batch_transformer(
+    batch: Tuple[Tuple[str, str, str, List[np.ndarray[int]]]],
+    tokenizer: AutoTokenizer, augment_data: bool = False
+    ) -> Dict[str, torch.Tensor]:
     """Function to transforms a minibatch of samples into a format useful for
-    the training procedure.
+    the training procedure of a transformer-based model.
 
     Parameters
     ----------
-    batch : tuple of (str, str, str, list of int)
+    batch : ((str, str, str, list of int), ...)
         The input minibatch.
     tokenizer : AutoTokenizer
         The autotokenizer to encode the input data.
@@ -130,15 +136,79 @@ def _collate_batch(batch: Tuple[Tuple[str, str, str, List[np.ndarray[int]]]],
 
     # Get the results in a dictionary.
     return {
-        'ids': ids,
-        'mask': mask,
+        'ids': ids.type(torch.long),
+        'mask': mask.type(torch.long),
+        'labels': torch.tensor(labels, dtype=torch.long)
+    }
+
+def _collate_batch_lstm(
+    batch: Tuple[Tuple[str, str, str, List[np.ndarray[int]]]],
+    tokenizer: Dict[str, int], augment_data: bool = False
+    ) -> Dict[str, torch.Tensor]:
+    """Function to transforms a minibatch of samples into a format useful for
+    the training procedure of the LSTM model.
+
+    Parameters
+    ----------
+    batch : ((str, str, str, list of int), ...)
+        The input minibatch.
+    tokenizer : { str, int }
+        The tokenizer to encode the input data.
+    augment_data : bool, optional
+        Whether to augment the data or not, by default False.
+
+    Returns
+    -------
+    { 'ids': Tensor, 'labels': Tensor }
+        Dictionary of tensors containing the encoded ids of the minibatch
+        and the respective labels.
+    """
+    # Create a list for the input texts.
+    inputs = []
+    # Create a numpy array for the labels.
+    labels = np.zeros(shape=(len(batch), len(batch[0][3])))
+
+    for i, (p, c, w, l) in enumerate(batch):
+        # Get random text among <premise>, <conclusion> and
+        # '<premise> [FAV]/[AGN] <conclusion>'
+        if augment_data:
+            [result] = sample([p, c, w], 1)
+        # If no data augmentation is required get
+        # '<premise> [FAV]/[AGN] <conclusion>'
+        else:
+            result = w
+        # Pre-process by stripping punctuation and turn to lowercase.
+        split_result = [w.strip(punctuation + ' ').lower() 
+                        if not '[AGN]' in w and not '[FAV]' in w else w.strip()
+                        for w in result.split()]
+        result = ' '.join(split_result)
+
+        # Encode the current sequence and appen it to the inputs array.
+        inputs.append(np.array([tokenizer[word] for word in result.split()]))
+        # Assign to the label matrix the current labels.
+        labels[i] = l
+
+    # Get the max length of the sentences of the current batch.
+    max_len = np.max([len(sequence) for sequence in inputs])
+
+    # Get a list of the sequences of the batch padded to the maximum length
+    # with zeroes and concatenate them in one array.
+    inputs = [
+        torch.tensor(np.concatenate([t, np.zeros(max_len - len(t))])) 
+        for t in inputs]
+    ids = torch.stack(inputs)
+
+    # Get the results in a dictionary.
+    return {
+        'ids': ids.type(torch.long),
         'labels': torch.tensor(labels, dtype=torch.float32)
     }
 
 def get_dataloader(arguments_df: pd.DataFrame, labels_df: pd.DataFrame,
                    tokenizer: AutoTokenizer, stance_encoder: Dict[str, str],
-                   batch_size: int = 8, shuffle: bool = True,
-                   use_augmentation: bool = False) -> DataLoader:
+                   is_transformer: bool, batch_size: int = 8,
+                   shuffle: bool = True, use_augmentation: bool = False
+                   ) -> DataLoader:
     """Get a dataloader from the arguments and labels dataframes.
 
     Parameters
@@ -151,6 +221,8 @@ def get_dataloader(arguments_df: pd.DataFrame, labels_df: pd.DataFrame,
         The autotokenizer to encode the input data.
     stance encoder : { str: str }
         Dictionary containing the encoding for each stance.
+    is_transformer : bool
+        Whether the model to use with the data is a transformer model or not.
     batch_size : int, optional
         The batch size, by default 8.
     shuffle : bool, optional
@@ -164,11 +236,15 @@ def get_dataloader(arguments_df: pd.DataFrame, labels_df: pd.DataFrame,
     DataLoader
         The dataloader.
     """
-    # Get dataset
+    # Get dataset.
     dataset = HumanValueDataset(arguments_df, labels_df, stance_encoder)
-    # Get dataloder
+    # Get collate function.
+    collate_fn = _collate_batch_transformer if is_transformer \
+        else _collate_batch_lstm
+
+    # Get dataloder.
     data_loader = DataLoader(
         dataset, num_workers=0, shuffle=shuffle, batch_size=batch_size,
-        collate_fn=lambda x: _collate_batch(x, tokenizer,
-                                            augment_data=use_augmentation))
+        collate_fn=lambda x: collate_fn(x, tokenizer,
+                                        augment_data=use_augmentation))
     return data_loader
