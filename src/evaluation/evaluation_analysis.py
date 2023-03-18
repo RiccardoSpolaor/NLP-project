@@ -160,7 +160,7 @@ def _plot_roc_subplot(y_true: np.ndarray, y_scores: np.ndarray,
     ----------
     y_true : ndarray
         The true labels.
-    y_pred : ndarray
+    y_scores : ndarray
         The predicted labels scores.
     targets : list of str
         The target label names.
@@ -185,7 +185,7 @@ def plot_roc_curves(y_true: np.ndarray, y_scores: np.ndarray,
     ----------
     y_true : ndarray
         The true labels.
-    y_pred : ndarray
+    y_scores : ndarray
         The predicted labels scores.
     targets : list of str
         The target label names.
@@ -243,13 +243,14 @@ def plot_roc_curves(y_true: np.ndarray, y_scores: np.ndarray,
 def plot_precision_recall_f1_macro_curves(
     y_true: np.ndarray, y_scores: np.ndarray, targets: List[str],
     dataset_name: str) -> None:
-    """Plot the Receiving Operator Curves for the predictions.
+    """Plot the precision, recall and F1 macro Curves for the predictions of
+    each target.
 
     Parameters
     ----------
     y_true : ndarray
         The true labels.
-    y_pred : ndarray
+    y_scores : ndarray
         The predicted labels scores.
     targets : list of str
         The target label names.
