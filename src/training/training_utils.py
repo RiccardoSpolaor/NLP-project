@@ -2,11 +2,11 @@
 import os
 from typing import Optional
 import torch
-from transformers import AutoModelForSequenceClassification
+from torch import nn
 import numpy as np
 
 
-class FocalLoss(torch.nn.Module):
+class FocalLoss(nn.Module):
     """Class implementing the focal loss function"""
     def __init__(self, alpha: np.ndarray, gamma: float = 1.) -> None:
         """Get the focal loss module. The focal loss functions downweights
@@ -66,13 +66,12 @@ class FocalLoss(torch.nn.Module):
 
 class Checkpoint():
     """Class to handle the checkpoints of a model"""
-    def __init__(self, model: AutoModelForSequenceClassification,
-                 path: Optional[str] = None) -> None:
+    def __init__(self, model: nn.Module, path: Optional[str] = None) -> None:
         """Initialize the checkpoint instance.
 
         Parameters
         ----------
-        model : AutoModelForSequenceClassification
+        model : Module
             The model from which the weights are saved in or loaded from the
             checkpoints.
         path : str, optional
@@ -106,12 +105,12 @@ class Checkpoint():
 
         self.last_metric = new_metric
 
-    def load_best(self) -> AutoModelForSequenceClassification:
+    def load_best(self) -> nn.Module:
         """Load the best weights of the model
 
         Returns
         -------
-        AutoModelForSequenceClassification
+        Module
             The model for sequence classification with the weights loaded
             from the best checkpoint.
         """
