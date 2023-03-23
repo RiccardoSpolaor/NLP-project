@@ -103,7 +103,7 @@ class Checkpoint():
 
             torch.save(checkpoint, self.path)
 
-        self.last_metric = new_metric
+            self.last_metric = new_metric
 
     def load_best(self) -> nn.Module:
         """Load the best weights of the model
