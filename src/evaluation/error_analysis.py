@@ -2,8 +2,8 @@
 from copy import deepcopy
 from typing import List, Tuple
 import numpy as np
+import matplotlib.pyplot as plt
 import pandas as pd
-from ..datasets.dataset_analysis import plot_sentiment_distribution
 
 
 def _get_accuracy(y_true: np.ndarray, y_preds: np.ndarray) -> np.ndarray:
@@ -58,51 +58,6 @@ def get_k_worst_predicted_instances(
         argsort_acc[:n_worst_instances]]
 
     return worst_predicted_instances, worst_predicted_instances_targets
-
-def plot_sentiment_values_false_negatives_and_positives(
-        worst_predicted_instances_targets: pd.DataFrame, y_true: np.ndarray,
-        y_preds: np.ndarray, targets: List[str]) -> None:
-    """Plot the false negatives and positives distribution of the predicted
-    targets.
-
-    Parameters
-    ----------
-    worst_predicted_instances_targets : DataFrame
-        The pandas dataframe containing the k worst predicted instances.
-    y_true : ndarray
-        The target labels.
-    y_preds : ndarray
-        The predicted labels.
-    targets : list of str
-        The sentiment target names.
-    """
-    accuracies = _get_accuracy(y_true, y_preds)
-    argsort_acc = np.argsort(accuracies)
-
-    worst_predicted_instances_false_negative_targets = \
-        deepcopy(worst_predicted_instances_targets)
-    worst_predicted_instances_false_positive_targets = \
-        deepcopy(worst_predicted_instances_targets)
-
-    for (i, row), pred in zip(worst_predicted_instances_targets.iterrows(),
-                              y_preds[argsort_acc]):
-        false_negatives = (np.array(row) > pred).astype(np.uint8)
-        false_positives = (np.array(row) < pred).astype(np.uint8)
-
-        worst_predicted_instances_false_negative_targets.loc[i] = pd.Series(
-            false_negatives, index=targets)
-
-        worst_predicted_instances_false_positive_targets.loc[i] = pd.Series(
-            false_positives, index=targets)
-
-    plot_sentiment_distribution(
-        worst_predicted_instances_false_negative_targets,
-        title='Sentiment values false negatives distribution on the worst ' +
-        'predicted instances of the test set')
-    plot_sentiment_distribution(
-        worst_predicted_instances_false_positive_targets,
-        title='Sentiment values false positives distribution on the worst ' +
-        'predicted instances of the test set')
 
 def print_k_worst_predicted_instances(
     worst_predicted_instances: pd.DataFrame, y_true: np.ndarray,
