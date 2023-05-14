@@ -22,9 +22,7 @@ def _get_labels_list(labels_row: pd.Series) -> pd.Series:
     return [index for index, value in labels_row.items() if value == 1]
 
 def get_dataframes(
-    data_folder: str, df_type: Literal['training', 'validation'],
-    extra_input_premises_file: Optional[str] = None, 
-    extra_input_labels_file: Optional[str] = None
+    data_folder: str, df_type: Literal['training', 'validation']
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Get the arguments and labels dataframes.
 
@@ -60,27 +58,6 @@ def get_dataframes(
     # Remove the `Argument ID` column from the dataframes
     arguments_df.drop('Argument ID', axis=1, inplace=True)
     labels_df.drop('Argument ID', axis=1, inplace=True)
-    
-    if extra_input_premises_file is not None and \
-        extra_input_labels_file is not None:
-        extra_input_premises_file = os.path.join(
-            data_folder, extra_input_premises_file)
-        extra_input_labels_file = os.path.join(
-            data_folder, extra_input_labels_file)
-        with open(extra_input_premises_file, 'r') as f_premises:
-            with open(extra_input_labels_file, 'r') as f_labels:
-                extra_input_premises = f_premises.readlines()
-                extra_input_labels = [ast.literal_eval(l)
-                                      for l in f_labels.readlines()]
-        for premise, labels in zip(extra_input_premises, extra_input_labels):
-            arguments_df = arguments_df.append(
-                { 'Conclusion': premise, 'Stance': 'in favor of',
-                 'Premise': premise, 'Labels': labels},
-                ignore_index=True)
-            labels_dict = { c: 1 if c in labels else 0
-                           for c in labels_df.columns }
-            labels_df = labels_df.append(labels_dict, ignore_index=True)
-                
 
     return arguments_df, labels_df
 
