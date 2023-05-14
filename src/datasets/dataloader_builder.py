@@ -108,14 +108,14 @@ def _collate_batch_transformer(
     labels = np.zeros(shape=(len(batch), len(batch[0][3])))
 
     for i, (p, c, w, l) in enumerate(batch):
-        # Get random text among <premise>, <conclusion> and
+        # Get random text among <premise> and
         # '<premise> [FAV]/[AGN] <conclusion>'
         if augment_data:
-            [result] = sample([p, c, w], 1)
+            [result] = sample([p, w], 1)
         # If no data augmentation is required get
-        # '<premise> [FAV]/[AGN] <conclusion>'
+        # '<premise>'
         else:
-            result = w
+            result = p
         # Assign to the matrices at the given index the text and the labels
         input_texts[i] = result
         labels[i] = l
