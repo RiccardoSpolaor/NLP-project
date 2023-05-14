@@ -275,6 +275,10 @@ def train(
         # Set the model in train mode.
         model.train()
 
+    checkpoint.save_last( train_loss_history = train_loss_history,
+                          val_loss_history = val_loss_history,
+                          val_f1_macro_history = val_f1_macro_history)
+
     # Reload the best weights if specified.
     if checkpoint is not None and reload_best_weights:
         _ = checkpoint.load_best()
