@@ -111,11 +111,11 @@ def _collate_batch_transformer(
         # Get random text among <premise>, <conclusion> and
         # '<premise> [FAV]/[AGN] <conclusion>'
         if augment_data:
-            [result] = sample([p, c, w], 1)
+            result = p
         # If no data augmentation is required get
         # '<premise> [FAV]/[AGN] <conclusion>'
         else:
-            result = w
+            result = p
         # Assign to the matrices at the given index the text and the labels
         input_texts[i] = result
         labels[i] = l
