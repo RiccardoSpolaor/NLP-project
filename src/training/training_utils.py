@@ -117,6 +117,16 @@ class Checkpoint():
         checkpoint = torch.load(self.path)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         return self.model
+    
+    def save_last(self, **kwargs) -> None:
+        """
+        Save the whole history at the end
+        """
+        checkpoint = { k: np.array(v) for k, v in kwargs.items()}
+        checkpoint_old = torch.load(self.path)
+        checkpoint['model_state_dict'] = checkpoint_old['model_state_dict']
+
+        torch.save(checkpoint, self.path)
 
 class EarlyStopping():
     """Class defining an early stopping monitor"""
