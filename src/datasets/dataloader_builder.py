@@ -83,7 +83,7 @@ class HumanValueDataset(Dataset):
 
 def _collate_batch_transformer(
     batch: Tuple[Tuple[str, str, str, List[np.ndarray[int]]]],
-    tokenizer: AutoTokenizer, augment_data: bool = False
+    tokenizer: AutoTokenizer, use_all_instance: bool = False
     ) -> Dict[str, torch.Tensor]:
     """Function to transforms a minibatch of samples into a format useful for
     the training procedure of a transformer-based model.
@@ -94,8 +94,8 @@ def _collate_batch_transformer(
         The input minibatch.
     tokenizer : AutoTokenizer
         The autotokenizer to encode the input data.
-    augment_data : bool, optional
-        Whether to augment the data or not, by default False.
+    use_all_instance : bool, optional
+        Whether to use all instance data or just the premise, by default False.
 
     Returns
     -------
@@ -107,13 +107,11 @@ def _collate_batch_transformer(
     input_texts = np.zeros(shape=(len(batch),), dtype=object)
     labels = np.zeros(shape=(len(batch), len(batch[0][3])))
 
-    for i, (p, c, w, l) in enumerate(batch):
-        # Get random text among <premise> and
-        # '<premise> [FAV]/[AGN] <conclusion>'
-        if augment_data:
-            [result] = sample([p, w], 1)
-        # If no data augmentation is required get
-        # '<premise>'
+    for i, (p, _, w, l) in enumerate(batch):
+        # Get '<premise> [FAV]/[AGN] <conclusion>'
+        if use_all_instance:
+            result = w
+        # Get '<premise>'
         else:
             result = p
         # Assign to the matrices at the given index the text and the labels
@@ -143,7 +141,7 @@ def _collate_batch_transformer(
 
 def _collate_batch_lstm(
     batch: Tuple[Tuple[str, str, str, List[np.ndarray[int]]]],
-    tokenizer: Dict[str, int], augment_data: bool = False
+    tokenizer: Dict[str, int], use_all_instance: bool = False
     ) -> Dict[str, torch.Tensor]:
     """Function to transforms a minibatch of samples into a format useful for
     the training procedure of the LSTM model.
@@ -154,8 +152,8 @@ def _collate_batch_lstm(
         The input minibatch.
     tokenizer : { str, int }
         The tokenizer to encode the input data.
-    augment_data : bool, optional
-        Whether to augment the data or not, by default False.
+    use_all_instance : bool, optional
+        Whether to use all instance data or just the premise, by default False.
 
     Returns
     -------
@@ -168,13 +166,11 @@ def _collate_batch_lstm(
     # Create a numpy array for the labels.
     labels = np.zeros(shape=(len(batch), len(batch[0][3])))
 
-    for i, (p, c, w, l) in enumerate(batch):
-        # Get random text among <premise>, <conclusion> and
-        # '<premise> [FAV]/[AGN] <conclusion>'
-        if augment_data:
-            [result] = sample([p, c, w], 1)
-        # If no data augmentation is required get
-        # '<premise> [FAV]/[AGN] <conclusion>'
+    for i, (p, _, w, l) in enumerate(batch):
+        # Get '<premise> [FAV]/[AGN] <conclusion>'
+        if use_all_instance:
+            result = p
+        # Get '<premise>'
         else:
             result = w
         # Pre-process by stripping punctuation and turn to lowercase.
@@ -207,7 +203,7 @@ def _collate_batch_lstm(
 def get_dataloader(arguments_df: pd.DataFrame, labels_df: pd.DataFrame,
                    tokenizer: AutoTokenizer, stance_encoder: Dict[str, str],
                    is_transformer: bool, batch_size: int = 8,
-                   shuffle: bool = True, use_augmentation: bool = False
+                   shuffle: bool = True, use_all_instance: bool = False
                    ) -> DataLoader:
     """Get a dataloader from the arguments and labels dataframes.
 
@@ -228,8 +224,8 @@ def get_dataloader(arguments_df: pd.DataFrame, labels_df: pd.DataFrame,
     shuffle : bool, optional
         Whether or not to shuffle the data while creating the dataloader,
         by default True.
-    use_augmentation : bool, optional
-        Whether to augment the data or not, by default False.
+    use_all_instance : bool, optional
+        Whether to use all instance data or just the premise, by default False.
 
     Returns
     -------
@@ -246,5 +242,5 @@ def get_dataloader(arguments_df: pd.DataFrame, labels_df: pd.DataFrame,
     data_loader = DataLoader(
         dataset, num_workers=0, shuffle=shuffle, batch_size=batch_size,
         collate_fn=lambda x: collate_fn(x, tokenizer,
-                                        augment_data=use_augmentation))
+                                        use_all_instance==use_all_instance))
     return data_loader
