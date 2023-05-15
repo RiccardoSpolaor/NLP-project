@@ -117,7 +117,7 @@ def split_dataframes(
              labels_df.loc[[index for index in augmented_df.index if index in idx_1]]
              ), axis=0)
 
-        return (arguments_df_1, labels_df_1), (arguments_df_2, labels_df_2)
+        return (arguments_df_1, labels_df_1), (arguments_df_2, labels_df_2), augmented_df
 
     # Split the dataframes in train and validation
     arguments_df_1, arguments_df_2, labels_df_1, labels_df_2 = \
@@ -130,4 +130,4 @@ def split_dataframes(
     arguments_df_2.reset_index(drop=True, inplace=True)
     labels_df_2.reset_index(drop=True, inplace=True)
 
-    return (arguments_df_1, labels_df_1), (arguments_df_2, labels_df_2)
+    return (arguments_df_1, labels_df_1), (arguments_df_2, labels_df_2), None

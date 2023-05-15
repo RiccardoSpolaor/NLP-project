@@ -69,17 +69,18 @@ def get_texts_from_arguments_dataframes(stance_encoder: Dict[str, str],
     texts = []
 
     for df in dataframes:
-        for row in df.itertuples():
-            stance = stance_encoder[row.Stance]
-            split_premise = [w.strip(punctuation + ' ')
-                             for w in row.Premise.split()]
-            processed_premise = ' '.join(split_premise).lower()
+        if df is not None:
+            for row in df.itertuples():
+                stance = stance_encoder[row.Stance]
+                split_premise = [w.strip(punctuation + ' ')
+                                for w in row.Premise.split()]
+                processed_premise = ' '.join(split_premise).lower()
 
-            split_conclusion = [w.strip(punctuation + ' ')
-                                for w in row.Conclusion.split()]
-            processed_conclusion = ' '.join(split_conclusion).lower()
+                split_conclusion = [w.strip(punctuation + ' ')
+                                    for w in row.Conclusion.split()]
+                processed_conclusion = ' '.join(split_conclusion).lower()
 
-            texts.append(
-                processed_premise + f' {stance} ' + processed_conclusion)
+                texts.append(
+                    processed_premise + f' {stance} ' + processed_conclusion)
 
     return [t.split() for t in texts]
