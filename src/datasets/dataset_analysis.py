@@ -1,10 +1,11 @@
 """Module providing functions to perform the analysis of the dataset."""
 from collections import Counter, OrderedDict
 import string
-from typing import Optional
+from typing import List, Optional
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.cm import get_cmap
 from wordcloud import WordCloud, STOPWORDS
 
 
@@ -36,6 +37,44 @@ def plot_stance_distribution(arguments_df: pd.DataFrame,
     plt.tight_layout()
 
     plt.show()
+    
+def plot_stance_distributions(
+    arguments_dfs: List[pd.DataFrame], labels: List[str],
+    title: str = 'Stance distribution') -> None:
+    """Plot the distribution of stances across the dataframe
+
+    Parameters
+    ----------
+    arguments_df : DataFrame
+        A pandas arguments dataframe.
+    title : str, optional
+        The title of the plot, by default 'Stance distribution'
+    """
+    # Get color map
+    cmap = get_cmap('Set1')
+    # Set the bars offset
+    offsets = np.linspace(0., 1., len(arguments_dfs))
+    # Plot the subplots
+    _, ax = plt.subplots(nrows=1, ncols=1, sharex=True, sharey=True,
+                         figsize=(15, 5))
+    # Plot the counts of the stances for each dataframe
+    for i, (arguments_df, label) in enumerate(zip(arguments_dfs, labels)):
+        arguments_df.Stance.value_counts(normalize=True).plot(
+            ax=ax, kind='bar', width=.1, label=label, color=cmap(i),
+            position=offsets[i])
+
+    # Set the title
+    plt.suptitle(title)
+
+    # Set the axis labels
+    ax.set_xlabel('stance')
+    ax.set_ylabel('ratio')
+
+    # Use a tight layout
+    plt.tight_layout()
+    plt.legend()
+
+    plt.show()
 
 def plot_sentiment_distribution(
     labels_df: pd.DataFrame,
@@ -64,6 +103,46 @@ def plot_sentiment_distribution(
 
     # Use a tight layout
     plt.tight_layout()
+
+    plt.show()
+    
+def plot_sentiment_distributions(
+    label_dfs: List[pd.DataFrame], labels: List[str],
+    title: str = 'Sentiment values distribution') -> None:
+    """Plot the distribution of sentiment values across the dataframe
+
+    Parameters
+    ----------
+    labels_df : DataFrame
+        A pandas labels dataframe.
+    title : str, optional
+        The title of the plot, by default 'Sentiment values distribution'
+    """
+    # Get color map
+    cmap = get_cmap('Set1')
+    # Set the bars offset
+    offsets = np.linspace(0., 1., len(label_dfs))
+    # Plot the subplots
+    _, ax = plt.subplots(nrows=1, ncols=1, sharex=True, sharey=True,
+                         figsize=(15, 6))
+    # Plot the counts of the sentiments
+    for i, (label_df, label) in enumerate(zip(label_dfs, labels)):
+        label_df.sum().plot(
+            ax=ax, kind='bar', width=.2, label=label, color=cmap(i),
+            position=offsets[i])
+
+    # Set the title
+    plt.suptitle(title)
+
+    # Set the axis labels
+    ax.set_xlabel('sentiment values')
+    ax.set_ylabel('count')
+
+    # Use a tight layout
+    plt.tight_layout()
+    
+    # Set the legend
+    plt.legend()
 
     plt.show()
 
