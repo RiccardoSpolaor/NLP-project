@@ -56,7 +56,7 @@ def plot_stance_distributions(
     offsets = np.linspace(0., 1., len(arguments_dfs))
     # Plot the subplots
     _, ax = plt.subplots(nrows=1, ncols=1, sharex=True, sharey=True,
-                         figsize=(15, 5))
+                         figsize=(5, 4))
     # Plot the counts of the stances for each dataframe
     for i, (arguments_df, label) in enumerate(zip(arguments_dfs, labels)):
         arguments_df.Stance.value_counts(normalize=True).plot(
@@ -72,7 +72,8 @@ def plot_stance_distributions(
 
     # Use a tight layout
     plt.tight_layout()
-    plt.legend()
+    plt.legend(loc='lower left')
+
 
     plt.show()
 
