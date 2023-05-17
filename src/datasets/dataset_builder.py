@@ -67,7 +67,8 @@ def split_dataframes(
     ) -> Tuple[Tuple[pd.DataFrame, pd.DataFrame],
                Tuple[pd.DataFrame, pd.DataFrame]]:
     """Split the arguments and label dataframes into train and validation.
-    Apply augmentation if the file of augmented premises is provided.
+    Apply augmentation if the file of augmented premises is provided and
+    return the augmented dataframe.
 
     Parameters
     ----------
@@ -91,6 +92,8 @@ def split_dataframes(
     (DataFrame, DataFrame)
         The split arguments validation dataframe and the respective
         labels dataframe.
+    DataFrame | None
+        The augmented dataframe or None if no augmentation is applied.
     """
     if augmented_premises_file is not None:
         (arguments_df_1, arguments_df_2, labels_df_1, labels_df_2, idx_1, _

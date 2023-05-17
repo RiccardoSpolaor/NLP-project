@@ -41,12 +41,14 @@ def plot_stance_distribution(arguments_df: pd.DataFrame,
 def plot_stance_distributions(
     arguments_dfs: List[pd.DataFrame], labels: List[str],
     title: str = 'Stance distribution') -> None:
-    """Plot the distribution of stances across the dataframe
+    """Plot the distribution of stances across more dataframes
 
     Parameters
     ----------
-    arguments_df : DataFrame
-        A pandas arguments dataframe.
+    arguments_dfs : list of DataFrame
+        A pandas arguments dataframe list.
+    labels : list of str
+        The labels of the dataframes.
     title : str, optional
         The title of the plot, by default 'Stance distribution'
     """
@@ -110,12 +112,16 @@ def plot_sentiment_distribution(
 def plot_sentiment_distributions(
     label_dfs: List[pd.DataFrame], labels: List[str],
     title: str = 'Sentiment values distribution') -> None:
-    """Plot the distribution of sentiment values across the dataframe
+    """
+    Plot the distribution of sentiment values across a list of
+    dataframes
 
     Parameters
     ----------
-    labels_df : DataFrame
-        A pandas labels dataframe.
+    labels_df : list of DataFrame
+        A pandas labels dataframe list.
+    labels : list of str
+        The labels of the dataframes.
     title : str, optional
         The title of the plot, by default 'Sentiment values distribution'
     """
